@@ -1,10 +1,25 @@
 /*
  * Copyright (c) 2014 by PROS, Inc.  All Rights Reserved.
- * This software is the confidential and proprietary information of
- * PROS, Inc. ("Confidential Information").
- * You may not disclose such Confidential Information, and may only
- * use such Confidential Information in accordance with the terms of
- * the license agreement you entered into with PROS.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  This code is a DERIVATIVE
+ * WORK of source code previously released and designated, by Oracle, as
+ * subject to the "Classpath" exception as provided by Oracle in the
+ * LICENSE file of the original work; the same LICENSE file accompanies
+ * this code.  As a DERIVATIVE WORK, the authors make this code subject
+ * to the same license terms and conditions.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 package com.pros.java.text;

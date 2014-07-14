@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:0.9.0-M3'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.0.2'
     }
 }
 
@@ -11,6 +11,7 @@ apply plugin: 'java'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = '1.6'
+targetCompatibility = '1.6'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 // NetBeans will automatically add "run" and "debug" tasks relying on the
@@ -43,5 +44,18 @@ jar {
         attributes 'Build-Date': new Date().toString()
 //        attributes 'Implementation-Version': version
 //        attributes 'Implementation-Vendor': 'PROS, Inc.'
+    }
+}
+
+shadowJar {
+    from('NOTICE') { // only required in shadowed JARs that include dependency binaries
+      into 'META-INF'
+    }
+}
+
+tasks.withType(Jar) {
+    from('src/main/java') // include source code to be GPLv2 compliant
+    from('LICENSE') {     // include license text to be GPLv2 compliant
+      into 'META-INF'
     }
 }

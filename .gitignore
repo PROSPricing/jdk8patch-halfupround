@@ -1,0 +1,13 @@
+build/
+tmp/
+.idea/
+.nb-gradle/
+.classpath
+.loadpath
+.metadata
+.project
+.settings
+
+gradle/wrapper/dists/
+.gradle/
+*.jar

@@ -1,5 +1,5 @@
-Runtime patch for JDK8 `HALF_UP` rounding bug
-=============================================
+Patch for JDK8 `HALF_UP` rounding bug
+=====================================
 
 ## The problem
 
@@ -47,11 +47,13 @@ Instead, this patch applies changes to `java.text.DigitList` _in memory_ and onl
 programs or environments that are explicitly configured to use it.  That configuration will stay
 local to that application/environment and so has the potential to survive JVM upgrades.
 
-This is done by implementing a [Java Agent], a feature introduced in JDK 5, that can _redefine_
-a class's bytecode when the target class is first loaded by any classloader.  The agent is injected
-_before_ the application's (or container's) `main` method and so should be completely transparent
-to the application.  Furthermore, the application does not need to be modified other than to enable
-its startup script(s) to inject the agent as a JVM command line option.
+This is done by implementing a
+[Java Agent](http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html),
+a feature introduced in JDK 5, that can optionally _redefine_ a class's bytecode when the target
+class is first loaded by any classloader.  The agent is injected _before_ the application's (or
+container's) `main` method and so should be completely transparent to the application.
+Furthermore, the application does not need to be modified other than to enable its startup
+script(s) to inject the agent as a JVM command line option.
 
 Even though the bug only appears in Java 8, this patch should be compiled with **Java 6** in order
 to maintain maximum compatibility for those applications that may need to support running on a range
@@ -85,7 +87,7 @@ affected by the bug, or if the patch will apply itself correctly.  Execute the s
 using one of the following methods:
 
     # Standalone patch JAR with no bundled dependencies
-    $ java -javaagent:path/to/patch.jar -cp <classpath_including_patch_and_ASM_jars> com.pros.java.text.DigitListPatch
+    $ java -javaagent:path/to/patch.jar -cp <classpath_with_patch_and_ASM_jars> com.pros.java.text.DigitListPatch
     
     # Patch JAR that includes ASM
     $ java -javaagent:path/to/patch-with-asm.jar -jar path/to/patch-with-asm.jar
@@ -144,3 +146,40 @@ However, without the patch (without the `-javaagent` option) the self-test on ea
     
     Overall result : NOT FIXED (expected on Java 1.8)
 
+## Copyright
+
+Copyright (c) 2014 by [PROS, Inc.](http://www.pros.com/)  All Rights Reserved.
+
+## License
+
+The original OpenJDK `java.text.DigitList` source code is released under the
+[GNU Public License Version 2 with Classpath Exception](https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE)
+as designated by Oracle.  Development of this patch required knowledge of that
+source code, which makes the patch a _derivative work_ and subject to the same
+license terms.  The authors of this patch wish to extend and apply the same
+_Classpath Exception_ to users of binary executable versions of this patch.
+
+    This code is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License version 2 only, as
+    published by the Free Software Foundation.
+
+    Linking this library statically or dynamically with other modules is making
+    a combined work based on this library.  Thus, the terms and conditions of
+    the GNU General Public License cover the whole combination.
+
+    As a special exception, the copyright holders of this library give you
+    permission to link this library with independent modules to produce an
+    executable, regardless of the license terms of these independent modules,
+    and to copy and distribute the resulting executable under terms of your
+    choice, provided that you also meet, for each linked independent module,
+    the terms and conditions of the license of that module.  An independent
+    module is a module which is not derived from or based on this library.  If
+    you modify this library, you may extend this exception to your version of
+    the library, but you are not obligated to do so.  If you do not wish to do
+    so, delete this exception statement from your version.
+
+    This code is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    version 2 for more details (a copy is included in the LICENSE file that
+    accompanied this code).

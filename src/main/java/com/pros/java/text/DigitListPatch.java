@@ -107,14 +107,19 @@ public final class DigitListPatch implements ClassFileTransformer
     {
         if (!TARGET_CLASS_INTERNAL_NAME.equals(className))
         {
-            return null; // no transformation to be done
+            return null; // ignore all other classes
         }
         ClassWriter writer = new ClassWriter(/* flags */ 0);
-        ClassVisitor visitor = new TargetClassAdapter(writer);
+        TargetClassAdapter visitor = new TargetClassAdapter(writer);
         try
         {
             new ClassReader(classfileBytes).accept(visitor, /* flags */ 0);
-            return writer.toByteArray();
+            if (visitor.isBytecodeModified())
+            {
+                applied = true;
+                return writer.toByteArray();
+            }
+            return null; // prefer original bytecode over ASM-generated if patch wasn't applied
         }
         catch (Exception e)
         {
@@ -131,6 +136,8 @@ public final class DigitListPatch implements ClassFileTransformer
      */
     private static class TargetClassAdapter extends ClassAdapter
     {
+        private boolean isModified;
+
         TargetClassAdapter(ClassVisitor cv)
         {
             super(cv);
@@ -155,6 +162,16 @@ public final class DigitListPatch implements ClassFileTransformer
             }
             return writerVisitor;
         }
+
+        void markBytecodeChanged()
+        {
+            isModified = true;
+        }
+
+        boolean isBytecodeModified()
+        {
+            return isModified;
+        }
     }
 
     /**
@@ -164,10 +181,10 @@ public final class DigitListPatch implements ClassFileTransformer
      */
     private static class TargetMethodAdapter extends MethodAdapter implements Opcodes
     {
-        private final ClassVisitor cv;
+        private final TargetClassAdapter cv;
         private Label halfUpSwitchCaseLabel;
 
-        TargetMethodAdapter(ClassVisitor classVisitor, MethodVisitor mv)
+        TargetMethodAdapter(TargetClassAdapter classVisitor, MethodVisitor mv)
         {
             super(mv);
             cv = classVisitor;
@@ -201,7 +218,7 @@ public final class DigitListPatch implements ClassFileTransformer
         @Override
         public void visitLabel(Label label)
         {
-            mv.visitLabel(label);
+            super.visitLabel(label);
             if (label.equals(halfUpSwitchCaseLabel))
             {
                 halfUpSwitchCaseLabel = null; // avoid accidentally doing this more than once
@@ -233,23 +250,23 @@ public final class DigitListPatch implements ClassFileTransformer
             {
                 throw new IllegalStateException(oops);
             }
-            applied = true; // volatile write
 
             // target object reference for INVOKEVIRTUAL
-            mv.visitIntInsn(ALOAD, 0); // 'this' (java.text.DigitList)
+            visitIntInsn(ALOAD, 0); // 'this' (java.text.DigitList)
 
             // target method arg 0: maximumDigits (int)
-            mv.visitIntInsn(ILOAD, 1); // calling method's argument 0
+            visitIntInsn(ILOAD, 1); // calling method's argument 0
 
             // target method arg 1: alreadyRounded (boolean, represented as int)
-            mv.visitIntInsn(ILOAD, 2); // calling method's argument 1
+            visitIntInsn(ILOAD, 2); // calling method's argument 1
 
             // target method arg 2: allDecimalDigits (boolean, represented as int)
-            mv.visitIntInsn(ILOAD, 3); // calling method's argument 2
+            visitIntInsn(ILOAD, 3); // calling method's argument 2
 
-            mv.visitMethodInsn(
+            visitMethodInsn(
                 INVOKEVIRTUAL, TARGET_CLASS_INTERNAL_NAME, PATCH_METHOD_NAME, patchMethodDesc);
-            mv.visitInsn(IRETURN);
+            visitInsn(IRETURN);
+            cv.markBytecodeChanged();
         }
 
         // Once we finish patching the buggy method with our extra method call, we need to add
@@ -261,11 +278,11 @@ public final class DigitListPatch implements ClassFileTransformer
         {
             super.visitEnd(); // current method
 
-            if (applied) // volatile read
+            if (cv.isBytecodeModified())
             {
                 // Need to create the NEW method that is called by the redirected case block,
                 // mirroring the patch implementation inside our template.
-                new ClassReader(extractClassBytecode(DigitList.class))
+                new ClassReader(extractBytecode(DigitList.class))
                     .accept(new TemplateClassAdapter(cv), /* flags */ 0);
             }
         }
@@ -352,7 +369,7 @@ public final class DigitListPatch implements ClassFileTransformer
     }
 
     // Helper for loading the bytecode of the template/shim
-    private static byte[] extractClassBytecode(Class<?> clazz)
+    private static byte[] extractBytecode(Class<?> clazz)
     {
         InputStream inStream = null;
         try

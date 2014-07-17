@@ -31,7 +31,7 @@ package com.pros.java.text;
  * be copied; the member fields used within the method must match their definition in the
  * target class, however, so that the shim bytecode will be correct.
  *
- * @author William Price (wprice)
+ * @author William Price
  */
 abstract class DigitList
 {

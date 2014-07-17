@@ -2,6 +2,7 @@ build/
 tmp/
 .idea/
 .nb-gradle/
+.nb-*
 .classpath
 .loadpath
 .metadata

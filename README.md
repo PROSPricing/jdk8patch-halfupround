@@ -5,7 +5,7 @@ Patch for JDK8 `HALF_UP` rounding bug
 
 This patch attempts to address the problem described in the following OpenJDK issues:
 - [JDK-8039915](https://bugs.openjdk.java.net/browse/JDK-8039915): NumberFormat.format() does not consider required no. of fraction digits properly
-- [JDK-8041961](https://bugs.openjdk.java.net/browse/JDK-8041961): DecimalFormat RoundingMode.HALF_UP is broken (HALF_EVEN is OK) (duplicate)
+- [JDK-8041961](https://bugs.openjdk.java.net/browse/JDK-8041961) (duplicate): DecimalFormat RoundingMode.HALF_UP is broken (HALF_EVEN is OK)
 
 The problem was introduced in Java 8 at the same time as the fix for:
 - [JDK-7131459](https://bugs.openjdk.java.net/browse/JDK-7131459): DecimalFormat produces wrong format() results when close to a tie
@@ -39,9 +39,10 @@ it, one can decompile `rt.jar`, apply the fix, recompile, and recreate `rt.jar`.
 has a number of drawbacks:
 
 1. Potential issues with the Oracle JDK/JVM license and/or terms of use
-1. Requires a high degree of technical skill
-1. Applies to _all programs_ that use that JVM (share that copy of `rt.jar`)
-1. Changes will be lost when upgrading to a new version of the JVM that may also be buggy (8, 8u5, and 8u11 are all affected)
+1. Requires a moderate degree of technical skill outside the normal workflow for many sysadmins
+1. It's non-selective; it unconditionally applies to _all programs_ that use that JVM (share that copy of `rt.jar`)
+1. Changes will be lost when upgrading to a new version of the JVM that may also be buggy (the original 8.0, update 5, and update 11 are all affected)
+1. Not easily shipped with a product or application that doesn't already bundle its own JRE
 
 Instead, this patch applies changes to `java.text.DigitList` _in memory_ and only for those
 programs or environments that are explicitly configured to use it.  That configuration will stay
@@ -66,6 +67,24 @@ the bug was introduced.  If it finds it, it attempts to patch the bytecode; othe
 of the way.  Therefore, it is hoped that this patch is well-behaved and compatible with current Java 8
 releases as well as older JVMs all the way back to Java 6.
 
+## Test, Test, TEST!
+
+You SHOULD NOT ship this patch with your application without testing it, first.   There is a
+self-test included in the patch (see: _Enable the patch_) to help determine if your JVM is
+affected and whether the patch works on that particular JVM, but it is not a replacement for
+due diligence and thorough testing of your own application.
+
+This patch _appears_ to work, but the authors have done _neither_ exhaustive testing across
+the vast range of decimal values _nor_ have they tested every possible rounding path inside
+the JDK libraries.  More eyes on the patch code, and more real-world tests would be much
+appreciated.  Please consider _opening an issue_ in Github with the keyword `WFM` in the
+title if this patch worked for your product, library, or application.  Of course, if the patch
+failed to work in a situation, _definitely_ open an issue here in Github with as much detail
+as you can provide.
+
+**Pull requests for new testcases, and of course bug fixes, are highly desired and welcome.**
+
+
 ## Enable the patch
 
 Pre-requisites:
@@ -75,7 +94,19 @@ Pre-requisites:
 
 If your application does not currently use the ASM library, there is a version of this patch that
 includes the ASM 3.1 classes already in the JAR.  Or, use your favorite build system and package
-management tool to get `asm:asm:3.1` into your project's classpath.
+management tool to get `asm:asm:3.1` into your project's classpath.  (If you need a newer version
+of ASM or a different tool, contributions to the project are welcome.)
+
+Precompiled JARs are available publicly:
+
+Repo     | [jCenter](https://bintray.com/bintray/jcenter)
+Group    | com.pros.opensource.java
+Artifact | jdk8patch-halfupround-asm31
+Version  | 0.9
+
+Use the classifier `all` if you want the JAR that _bundles ASM 3.1 inside_ (in its original package
+structure), then you can _exclude_ the transitive dependency on the ASM library.  (If you take
+this approach, we assume you know how to manage your dependencies and avoid classpath collisions.)
 
 Applying the patch is as simple as adding one additional entry to the _beginning_ of the command
 line that starts your application's JVM:

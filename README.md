@@ -99,7 +99,8 @@ of ASM or a different tool, contributions to the project are welcome.)
 
 Precompiled JARs are available publicly:
 
-Repo     | [jCenter](https://bintray.com/bintray/jcenter)
+         | [jCenter](https://bintray.com/bintray/jcenter)
+---------|------------------------------------------------
 Group    | com.pros.opensource.java
 Artifact | jdk8patch-halfupround-asm31
 Version  | 0.9

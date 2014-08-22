@@ -25,6 +25,9 @@ and a lower number rounds _up_**; `(x <= y) != (round(x) <= round(y))`.  It appe
 only affect the `HALF_UP` rounding mode, which is the kind of rounding taught in
 grade school arithmetic classes: `0.5` rounds away from zero, always.
 
+This issue is known to exist in the Oracle/OpenJDK 1.8.0 GA release,
+as well as in released updates: **u5**, **u11**, and **u20**.
+
 ## The fix
 
 Until Oracle releases an official fix, software that depends on the `HALF_UP` rounding mode
@@ -41,7 +44,7 @@ has a number of drawbacks:
 1. Potential issues with the Oracle JDK/JVM license and/or terms of use
 1. Requires a moderate degree of technical skill outside the normal workflow for many sysadmins
 1. It's non-selective; it unconditionally applies to _all programs_ that use that JVM (share that copy of `rt.jar`)
-1. Changes will be lost when upgrading to a new version of the JVM that may also be buggy (the original 8.0, update 5, and update 11 are all affected)
+1. Changes will be lost when upgrading to a new version of the JVM that may also be buggy
 1. Not easily shipped with a product or application that doesn't already bundle its own JRE
 
 Instead, this patch applies changes to `java.text.DigitList` _in memory_ and only for those

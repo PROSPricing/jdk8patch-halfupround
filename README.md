@@ -106,7 +106,7 @@ Precompiled JARs are available publicly:
 ---------|------------------------------------------------
 Group    | com.pros.opensource.java
 Artifact | jdk8patch-halfupround-asm31
-Version  | 0.9
+Version  | 0.9.1
 
 Use the classifier `all` if you want the JAR that _bundles ASM 3.1 inside_ (in its original package
 structure), then you can _exclude_ the transitive dependency on the ASM library.  (If you take

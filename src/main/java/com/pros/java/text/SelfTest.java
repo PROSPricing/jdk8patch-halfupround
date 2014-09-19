@@ -36,9 +36,11 @@ package com.pros.java.text;
 
 import static java.lang.System.out;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -54,6 +56,14 @@ import java.util.Locale;
  */
 final class SelfTest implements Runnable
 {
+    private final boolean defaultPrintActuals;
+
+    SelfTest()
+    {
+        String printActuals = System.getProperty(getClass().getName() + ".printActuals", "false");
+        defaultPrintActuals = Boolean.valueOf(printActuals);
+    }
+
     @Override
     public void run()
     {
@@ -61,25 +71,27 @@ final class SelfTest implements Runnable
             + "  java.text.DigitList.shouldRoundUp(int,boolean,boolean)%n"
             + "  HALF_UP case%n");
 
+        String javaVersion = System.getProperty("java.version");
+        String javaVendor = System.getProperty("java.vendor");
+        boolean isJava8 = isJava8orNewer(javaVersion, javaVendor);
+
         // Tests must run BEFORE DigitListPatch.applied can be trusted
         boolean behaviorOK =
             stackoverflow24426438()
             & stackoverflow24426438answer24426907()
             & jdk8041961()
-            & jdk8039915();
+            & jdk8039915()
+            & jdk7131459(isJava8);
 
-        String javaVersion = System.getProperty("java.version");
-        String javaVendor = System.getProperty("java.vendor");
         out.printf("%nAbove tests used Java %s (%s)%n", javaVersion, javaVendor);
         out.printf("installed at %s%n", System.getProperty("java.home"));
-
         out.printf("%nAgent installed: %s%nPatch applied  : %s%n%nOverall result : ",
             DigitListPatch.installed ? "yes" : "NO (missing -javaagent?)",
             DigitListPatch.applied ? "yes" : "NO");
 
         int resultCode = (behaviorOK ? 0x1 : 0)
             | (DigitListPatch.applied ? 0x2 : 0)
-            | (isJava8orNewer(javaVersion, javaVendor) ? 0x4 : 0);
+            | (isJava8 ? 0x4 : 0);
         String result;
         switch (resultCode)
         {
@@ -110,7 +122,8 @@ final class SelfTest implements Runnable
 
     boolean isJava8orNewer(String version, String vendor)
     {
-        if (System.getProperty("java.vendor").toLowerCase(Locale.US).contains("oracle"))
+        String lowercaseVendor = vendor.toLowerCase(Locale.US);
+        if (lowercaseVendor.contains("oracle") || lowercaseVendor.contains("openjdk"))
         {
             String[] versionParts = version.split("\\D");
             try
@@ -179,10 +192,17 @@ final class SelfTest implements Runnable
         nf2.setMaximumFractionDigits(1);
         nf2.setRoundingMode(RoundingMode.HALF_UP);
 
+        // must be in ascending order; see test case method: jdk7131459()
+        double[] exemptEdgeCases = { 0.15, 0.35, 0.85, 0.95 };
+
         boolean overallPass = true;
         for (int i = 0; i < 100; i++)
         {
             double num = i / 100.0;
+            if (Arrays.binarySearch(exemptEdgeCases, num) >= 0)
+            {
+                continue;
+            }
             String round1 = nf.format(num);
 
             // Next line deviates from the SO test loop to account for nf's HALF_EVEN behavior
@@ -193,10 +213,56 @@ final class SelfTest implements Runnable
         return overallPass;
     }
 
+    /**
+     * These cases are <em>expected</em> to be different in Java 8+ compared to earlier versions
+     * as an <em>intentional</em> change from
+     * <a href="https://bugs.openjdk.java.net/browse/JDK-7131459">JDK-7131459</a>.
+     * When looking at the compile-time literal values, the expected values may not seem
+     * correct until you look at their exact in memory, floating-point representation.
+     *
+     * @param isJava8 set {@code true} when testing a JVM version {@literal >=} 1.8.0
+     * @return {@code true} IFF all tests result in the expected value
+     */
+    private boolean jdk7131459(boolean isJava8)
+    {
+        out.println();
+        out.println("JDK-7131459 test case:");
+        if (!isJava8)
+        {
+            out.println("NOTE: These tests SHOULD NOT MATCH on earlier versions of Java.");
+        }
+
+        NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
+        nf.setMaximumFractionDigits(1);
+        nf.setRoundingMode(RoundingMode.HALF_UP);
+
+        boolean printActuals = true;
+        return (expect("0.1", nf, 0.15, printActuals)
+            &  expect("0.3", nf, 0.35, printActuals)
+            &  expect("0.8", nf, 0.85, printActuals)
+            &  expect("0.9", nf, 0.95, printActuals))
+            || !isJava8; // forced pass on JDK < 8 even though numbers won't match
+    }
+
     private boolean expect(String correct, NumberFormat nf, double unroundedInput)
     {
+        return expect(correct, nf, unroundedInput, defaultPrintActuals);
+    }
+
+    private boolean expect(
+        String correct, NumberFormat nf, double unroundedInput, boolean printActuals)
+    {
         String actual = nf.format(unroundedInput);
-        out.printf("%15s %s --> %-15s\t", unroundedInput, nf.getRoundingMode(), actual);
+        if (printActuals)
+        {
+            out.printf("%15s is actually: %s%n", unroundedInput, new BigDecimal(unroundedInput));
+        }
+        out.printf(
+            "%15s %-8s --> %-15s\t",
+            printActuals ? "" : String.valueOf(unroundedInput),
+            nf.getRoundingMode(),
+            actual);
+
         if (correct.equals(actual))
         {
             out.println("OK");

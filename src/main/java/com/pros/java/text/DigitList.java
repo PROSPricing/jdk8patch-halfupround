@@ -79,27 +79,12 @@ abstract class DigitList
             // >= 5 and we must follow the HALF_UP rule and round up.
             return true;
         } else if (digits[maximumDigits] == '5') {
-            if (maximumDigits == (count - 1)) {
-                // the rounding position is exactly the last index
-                if (alreadyRounded) {
-                    if (!allDecimalDigits)
-                        // The rounded value was above the tie and
-                        // FloatingDecimal truncated digits.  Since the
-                        // digit is still == '5' after truncation we
-                        // must round up.
-                        return true;
-                    else
-                        // FloatingDecimal rounded to an exact tie value
-                        // with a final (already rounded) digit == '5',
-                        // so we should not round up again.
-                        return false;
-                }
-            }
-            // More digits follow, so any rounding done by
-            // FloatingDecimal does not matter and we follow
-            // the HALF_UP rounding rule for '5'.
-            return true;
+            // On the midpoint 'tie' value, round up whenever...
+            return maximumDigits != (count - 1) // more nonzero digits exist (implies above tie), OR
+                || allDecimalDigits             // is an exact binary representation (at tie), OR
+                || !alreadyRounded;             // FloatingDecimal truncated digits (was above tie)
         }
+        // else: digit is <= 4 and does not round up
         return false; // in original switch(), was: break;
     }
 }

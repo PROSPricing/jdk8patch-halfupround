@@ -73,7 +73,7 @@ releases as well as older JVMs all the way back to Java 6.
 ## Test, Test, TEST!
 
 You SHOULD NOT ship this patch with your application without testing it, first.   There is a
-self-test included in the patch (see: _Enable the patch_) to help determine if your JVM is
+self-test included in the patch (see: _Diagnostics_ below) to help determine if your JVM is
 affected and whether the patch works on that particular JVM, but it is not a replacement for
 due diligence and thorough testing of your own application.
 
@@ -106,7 +106,10 @@ Precompiled JARs are available publicly:
 ---------|------------------------------------------------
 Group    | com.pros.opensource.java
 Artifact | jdk8patch-halfupround-asm31
-Version  | 0.9.1
+Version  | 0.9.2
+
+**Always use the latest available version.** Ironically, the logic in versions 0.9.1 and earlier
+did not account for the intentional and correct changes from `JDK-7131459` in some edge cases.
 
 Use the classifier `all` if you want the JAR that _bundles ASM 3.1 inside_ (in its original package
 structure), then you can _exclude_ the transitive dependency on the ASM library.  (If you take
@@ -116,6 +119,8 @@ Applying the patch is as simple as adding one additional entry to the _beginning
 line that starts your application's JVM:
 
     java -javaagent:path/to/patch.jar ...
+
+## Diagnostics
 
 The patch library includes a **self test** you can use to determine if your particular JVM is
 affected by the bug, or if the patch will apply itself correctly.  Execute the self test by hand
@@ -127,7 +132,10 @@ using one of the following methods:
     # Patch JAR that includes ASM
     $ java -javaagent:path/to/patch-with-asm.jar -jar path/to/patch-with-asm.jar
 
-Example self-test output from an unaffected Java 7 release:
+#### Unaffected Java 7 sample output
+
+You may notice that the test case for JDK-7131459 does not match on this earlier version of Java.
+The test suite ignores the results for that particular test on versions prior to JDK 8.
 
     JDK-8041961 test case:
              99.9989 HALF_UP --> 100                 OK
@@ -137,6 +145,17 @@ Example self-test output from an unaffected Java 7 release:
           0.95000055 HALF_UP --> 0.950001            OK
            0.9500006 HALF_UP --> 0.950001            OK
     
+    JDK-7131459 test case:
+    NOTE: These tests SHOULD NOT MATCH on earlier versions of Java.
+               0.15 is actually: 0.1499999999999999944488848768742172978818416595458984375
+                    HALF_UP  --> 0.2                expected: 0.1
+               0.35 is actually: 0.34999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.4                expected: 0.3
+               0.85 is actually: 0.84999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.9                expected: 0.8
+               0.95 is actually: 0.9499999999999999555910790149937383830547332763671875
+                    HALF_UP  --> 1                  expected: 0.9
+    
     Above tests used Java 1.7.0_51 (Oracle Corporation)
     installed at C:\JAVA\v7\jre
     
@@ -145,7 +164,10 @@ Example self-test output from an unaffected Java 7 release:
     
     Overall result : OK (no patch necessary)
 
-Example self-test output from a *patched* Java 8 release:
+#### Patched Java 8 example output
+
+These are the results you should expect when this is working correctly on Java 8.
+_If Oracle fixes the bug_ then these results should match without this patch, too.
 
     JDK-8041961 test case:
             99.9989 HALF_UP --> 100                 OK
@@ -155,7 +177,17 @@ Example self-test output from a *patched* Java 8 release:
          0.95000055 HALF_UP --> 0.950001            OK
           0.9500006 HALF_UP --> 0.950001            OK
     
-    Above tests used Java 1.8.0 (Oracle Corporation)
+    JDK-7131459 test case:
+               0.15 is actually: 0.1499999999999999944488848768742172978818416595458984375
+                    HALF_UP  --> 0.1                OK
+               0.35 is actually: 0.34999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.3                OK
+               0.85 is actually: 0.84999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.8                OK
+               0.95 is actually: 0.9499999999999999555910790149937383830547332763671875
+                    HALF_UP  --> 0.9                OK
+    
+    Above tests used Java 1.8.0_20 (Oracle Corporation)
     installed at C:\JAVA\v8\jre
     
     Agent installed: yes
@@ -163,7 +195,10 @@ Example self-test output from a *patched* Java 8 release:
     
     Overall result : FIXED
 
-However, without the patch (without the `-javaagent` option) the self-test on early GA releases of Java 8 looks like this:
+#### Buggy (unpatched) Java 8 example output
+
+Without the patch (without specifying the `-javaagent` option) the self-test
+on releases of Java 8 to date will look similar to the following.
 
     JDK-8041961 test case:
             99.9989 HALF_UP --> 100                 OK
@@ -173,7 +208,17 @@ However, without the patch (without the `-javaagent` option) the self-test on ea
          0.95000055 HALF_UP --> 0.950001            OK
           0.9500006 HALF_UP --> 0.95                expected: 0.950001
     
-    Above tests used Java 1.8.0 (Oracle Corporation)
+    JDK-7131459 test case:
+               0.15 is actually: 0.1499999999999999944488848768742172978818416595458984375
+                    HALF_UP  --> 0.1                OK
+               0.35 is actually: 0.34999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.3                OK
+               0.85 is actually: 0.84999999999999997779553950749686919152736663818359375
+                    HALF_UP  --> 0.8                OK
+               0.95 is actually: 0.9499999999999999555910790149937383830547332763671875
+                    HALF_UP  --> 0.9                OK
+    
+    Above tests used Java 1.8.0_20 (Oracle Corporation)
     installed at C:\JAVA\v8\jre
     
     Agent installed: NO (missing -javaagent?)
@@ -188,7 +233,8 @@ Copyright (c) 2014 by [PROS, Inc.](http://www.pros.com/)  All Rights Reserved.
 ## License
 
 The original OpenJDK `java.text.DigitList` source code is released under the
-[GNU Public License Version 2 with Classpath Exception](https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE)
+[GNU Public License Version 2 with Classpath
+Exception](https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE)
 as designated by Oracle.  Development of this patch required knowledge of that
 source code, which makes the patch a _derivative work_ and subject to the same
 license terms.  The authors of this patch wish to extend and apply the same

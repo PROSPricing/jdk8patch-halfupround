@@ -37,6 +37,7 @@ jar {
         attributes 'Created-By': "${System.properties['java.version']} (${System.properties['java.vendor']})"
     }
 }
+jar.dependsOn check
 
 shadowJar {
     from('NOTICE') { // only required in shadowed JARs that include dependency binaries

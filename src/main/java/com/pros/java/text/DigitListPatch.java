@@ -114,7 +114,7 @@ public final class DigitListPatch implements ClassFileTransformer
         try
         {
             new ClassReader(classfileBytes).accept(visitor, /* flags */ 0);
-            if (visitor.isBytecodeModified())
+            if (visitor.bytecodeModified)
             {
                 applied = true;
                 return writer.toByteArray();
@@ -136,7 +136,7 @@ public final class DigitListPatch implements ClassFileTransformer
      */
     private static class TargetClassAdapter extends ClassAdapter
     {
-        private boolean isModified;
+        boolean bytecodeModified;
 
         TargetClassAdapter(ClassVisitor cv)
         {
@@ -162,16 +162,6 @@ public final class DigitListPatch implements ClassFileTransformer
             }
             return writerVisitor;
         }
-
-        void markBytecodeChanged()
-        {
-            isModified = true;
-        }
-
-        boolean isBytecodeModified()
-        {
-            return isModified;
-        }
     }
 
     /**
@@ -183,6 +173,8 @@ public final class DigitListPatch implements ClassFileTransformer
     {
         private final TargetClassAdapter cv;
         private Label halfUpSwitchCaseLabel;
+        private Label halfDnSwitchCaseLabel;
+        private boolean canApply = true;
 
         TargetMethodAdapter(TargetClassAdapter classVisitor, MethodVisitor mv)
         {
@@ -194,13 +186,16 @@ public final class DigitListPatch implements ClassFileTransformer
         @Override
         public void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels)
         {
-            int targetRoundingModeOrdinal = RoundingMode.HALF_UP.ordinal();
+            // Switches on Enum types should use the enum constant's ordinal() value
+            // as the label index inside the TABLESWITCH
+            int halfUpOrdinal = RoundingMode.HALF_UP.ordinal();
+            int halfDnOrdinal = RoundingMode.HALF_DOWN.ordinal();
+
             if (labels.length <= RoundingMode.values().length
-                && labels.length > targetRoundingModeOrdinal)
+                && labels.length > Math.max(halfUpOrdinal, halfDnOrdinal))
             {
-                // Switches on Enum types should use the enum constant's ordinal() value
-                // as the label index inside the TABLESWITCH
-                halfUpSwitchCaseLabel = labels[targetRoundingModeOrdinal];
+                halfUpSwitchCaseLabel = labels[halfUpOrdinal];
+                halfDnSwitchCaseLabel = labels[halfDnOrdinal];
             }
             // else: bad assumption, and cannot patch!
             super.visitTableSwitchInsn(min, max, dflt, labels);
@@ -219,9 +214,9 @@ public final class DigitListPatch implements ClassFileTransformer
         public void visitLabel(Label label)
         {
             super.visitLabel(label);
-            if (label.equals(halfUpSwitchCaseLabel))
+            if (canApply && label.equals(halfUpSwitchCaseLabel))
             {
-                halfUpSwitchCaseLabel = null; // avoid accidentally doing this more than once
+                canApply = false; // avoid accidentally doing this more than once
 
                 // Inject call to and return value from the fix method, first.
                 // The existing byte code will follow (but should be unreachable).
@@ -266,7 +261,7 @@ public final class DigitListPatch implements ClassFileTransformer
             visitMethodInsn(
                 INVOKEVIRTUAL, TARGET_CLASS_INTERNAL_NAME, PATCH_METHOD_NAME, patchMethodDesc);
             visitInsn(IRETURN);
-            cv.markBytecodeChanged();
+            cv.bytecodeModified = true;
         }
 
         // Once we finish patching the buggy method with our extra method call, we need to add
@@ -278,8 +273,18 @@ public final class DigitListPatch implements ClassFileTransformer
         {
             super.visitEnd(); // current method
 
-            if (cv.isBytecodeModified())
+            // The label offset check is delayed because the positions might not both
+            // be resolved prior to this point.
+            if (halfUpSwitchCaseLabel.getOffset() == halfDnSwitchCaseLabel.getOffset())
             {
+                // HALF_UP and HALF_DOWN jump to the same branch (as in the proposed JDK8 fix)
+                cv.bytecodeModified = false; // transform() will DISCARD any changes
+            }
+            else if (cv.bytecodeModified)
+            {
+                // Our method call was inserted into the switch case *and* HALF_UP and HALF_DOWN
+                // are implemented by *different* blocks of code (as in the broken JDK8).
+
                 // Need to create the NEW method that is called by the redirected case block,
                 // mirroring the patch implementation inside our template.
                 new ClassReader(extractBytecode(DigitList.class))
@@ -369,7 +374,7 @@ public final class DigitListPatch implements ClassFileTransformer
     }
 
     // Helper for loading the bytecode of the template/shim
-    private static byte[] extractBytecode(Class<?> clazz)
+    static byte[] extractBytecode(Class<?> clazz)
     {
         InputStream inStream = null;
         try

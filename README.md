@@ -1,16 +1,16 @@
-Patch for JDK8 `HALF_UP` rounding bug
-=====================================
+Patch for JDK8 HALF_UP rounding bug
+===================================
 
 ## The problem
 
 This patch attempts to address the problem described in the following OpenJDK issues:
-- [JDK-8039915](https://bugs.openjdk.java.net/browse/JDK-8039915): NumberFormat.format() does not consider required no. of fraction digits properly
-- [JDK-8041961](https://bugs.openjdk.java.net/browse/JDK-8041961) (duplicate): DecimalFormat RoundingMode.HALF_UP is broken (HALF_EVEN is OK)
+- [JDK-8039915][JDK8039915]: Wrong NumberFormat.format() HALF_UP rounding when last digit exactly at rounding position greater than 5
+- [JDK-8041961][JDK8041961] (duplicate): DecimalFormat RoundingMode.HALF_UP is broken (HALF_EVEN is OK)
 
 The problem was introduced in Java 8 at the same time as the fix for:
-- [JDK-7131459](https://bugs.openjdk.java.net/browse/JDK-7131459): DecimalFormat produces wrong format() results when close to a tie
+- [JDK-7131459][JDK7131459]: DecimalFormat produces wrong format() results when close to a tie
 
-The fix for `JDK-7131459` has caused some confusion since it _purposefully_ changes the
+The fix for JDK-7131459 has caused some confusion since it _purposefully_ changes the
 rounding behavior as compared to Java 7 and prior versions.  A number of bugs were opened
 and subsequently closed (duplicate, wontfix) because of "rounding differences" that were
 assumed to be (and in many cases were) the result of the intentional change.  However the
@@ -20,22 +20,32 @@ behavior in the `HALF_UP` mode.
     99.9989 -> 100.00
     99.9990 ->  99.99
 
-To put it simply, this demonstrates a case where **a higher number rounds _down_, 
+To put it simply, this demonstrates a case where **a higher number rounds _down_,
 and a lower number rounds _up_**; `(x <= y) != (round(x) <= round(y))`.  It appears to
 only affect the `HALF_UP` rounding mode, which is the kind of rounding taught in
 grade school arithmetic classes: `0.5` rounds away from zero, always.
 
 This issue is known to exist in the Oracle/OpenJDK 1.8.0 GA release,
-as well as in released updates: **u5**, **u11**, and **u20**.
+as well as in released updates: **u5**, **u11**, **u20**, and **u25**.
 
 ## The fix
 
-Until Oracle releases an official fix, software that depends on the `HALF_UP` rounding mode
+**Oracle has committed an official fix** for Java _9_ ([bug 8039915][JDK8039915], [changeset][JDK9patch]),
+and backported to **Java 8u40** ([bug 8061380][JDK8061380], [changeset][JDK8patch]).  The _8u40-b12_
+early access image from 28 October 2014 is the first available build that is not affected by the
+problem described above.
+
+If you are running Java 8 update 40 or later, you do not require this patch.  However, if you wish
+to support earlier versions of Java 8, read on.
+
+## About this patch
+
+Prior to _update 40_, software running on Java 8 that depends on the `HALF_UP` rounding mode
 for formatting decimal values into a `String` will produce incorrect results.  The root cause
-appears to have been correctly identified [on StackOverflow](http://stackoverflow.com/a/24427356/2390644)
-thanks to user `Holger` with a link to the OpenJDK source file for `java.text.DigitList`.
-Specifically, the `shouldRoundUp` method was modified as a part of `JDK-7131459` and seemingly
-incorrectly so for the `HALF_UP` switch case block.
+appears to have been [correctly identified on StackOverflow.com][StackOverflow] by the user
+_Holger_ with a link to the OpenJDK source file for `java.text.DigitList`.  Specifically, the
+`shouldRoundUp` method was modified as a part of JDK-7131459 and seemingly incorrectly so for
+the `HALF_UP` switch case block.
 
 `java.text.DigitList` is a system class and loaded by the boot classloader.  In order to patch
 it, one can decompile `rt.jar`, apply the fix, recompile, and recreate `rt.jar`.  But that solution
@@ -51,24 +61,23 @@ Instead, this patch applies changes to `java.text.DigitList` _in memory_ and onl
 programs or environments that are explicitly configured to use it.  That configuration will stay
 local to that application/environment and so has the potential to survive JVM upgrades.
 
-This is done by implementing a
-[Java Agent](http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html),
-a feature introduced in JDK 5, that can optionally _redefine_ a class's bytecode when the target
-class is first loaded by any classloader.  The agent is injected _before_ the application's (or
-container's) `main` method and so should be completely transparent to the application.
-Furthermore, the application does not need to be modified other than to enable its startup
-script(s) to inject the agent as a JVM command line option.
+This is done by implementing a [Java Agent][J6Agent], a feature introduced in JDK 5, that can
+optionally _redefine_ a class's bytecode when the target class is first loaded by any classloader.
+The agent is injected _before_ the application's (or container's) `main` method and so should be
+completely transparent to the application.  Furthermore, the application requires no modification
+other than to enable its startup script(s) to inject the agent as a JVM command line option.
 
 Even though the bug only appears in Java 8, this patch should be compiled with **Java 6** in order
 to maintain maximum compatibility for those applications that may need to support running on a range
 of older Java releases and not be limited _only_ to the latest-and-greatest.  This is possible as
-long as nothing in the target class requires new bytecode formats/instructions, such as `INVOKEDYNAMIC`;
-thankfully, that condition appears to hold true at this time.
+long as nothing in the target class requires new bytecode formats/instructions, such as
+`INVOKEDYNAMIC`; thankfully, that condition appears to hold true at this time.
 
-The patch, as implemented here, looks for a specific method signature that also changed at the time
-the bug was introduced.  If it finds it, it attempts to patch the bytecode; otherwise, it stays out
-of the way.  Therefore, it is hoped that this patch is well-behaved and compatible with current Java 8
-releases as well as older JVMs all the way back to Java 6.
+The patch, as implemented here, looks for specific bytecode signatures that changed at the time
+the bug was introduced and when it was fixed.  It attempts to patch the bytecode only when it
+finds the particular bytecode signatures that suggest the bug is present. Otherwise, it stays out
+of the way.  It is _likely_ that this patch implementation is safe for use in all official Oracle
+releases of Java for versions 6 through 8.
 
 ## Test, Test, TEST!
 
@@ -106,10 +115,10 @@ Precompiled JARs are available publicly:
 ---------|------------------------------------------------
 Group    | com.pros.opensource.java
 Artifact | jdk8patch-halfupround-asm31
-Version  | 0.9.2
+Version  | 1.0
 
 **Always use the latest available version.** Ironically, the logic in versions 0.9.1 and earlier
-did not account for the intentional and correct changes from `JDK-7131459` in some edge cases.
+did not account for the intentional and correct changes from JDK-7131459 in some edge cases.
 
 Use the classifier `all` if you want the JAR that _bundles ASM 3.1 inside_ (in its original package
 structure), then you can _exclude_ the transitive dependency on the ASM library.  (If you take
@@ -167,7 +176,7 @@ The test suite ignores the results for that particular test on versions prior to
 #### Patched Java 8 example output
 
 These are the results you should expect when this is working correctly on Java 8.
-_If Oracle fixes the bug_ then these results should match without this patch, too.
+These results should match Java 8u40 and later, without this patch, too.
 
     JDK-8041961 test case:
             99.9989 HALF_UP --> 100                 OK
@@ -198,7 +207,7 @@ _If Oracle fixes the bug_ then these results should match without this patch, to
 #### Buggy (unpatched) Java 8 example output
 
 Without the patch (without specifying the `-javaagent` option) the self-test
-on releases of Java 8 to date will look similar to the following.
+on releases of Java 8 _prior to update 40_ will look similar to the following.
 
     JDK-8041961 test case:
             99.9989 HALF_UP --> 100                 OK
@@ -224,7 +233,7 @@ on releases of Java 8 to date will look similar to the following.
     Agent installed: NO (missing -javaagent?)
     Patch applied  : NO
     
-    Overall result : NOT FIXED (expected on Java 1.8)
+    Overall result : NOT FIXED (expected on Java 1.8 < u40)
 
 ## Copyright
 
@@ -233,8 +242,7 @@ Copyright (c) 2014 by [PROS, Inc.](http://www.pros.com/)  All Rights Reserved.
 ## License
 
 The original OpenJDK `java.text.DigitList` source code is released under the
-[GNU Public License Version 2 with Classpath
-Exception](https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE)
+[GNU Public License Version 2 with Classpath Exception][GPLv2CPE]
 as designated by Oracle.  Development of this patch required knowledge of that
 source code, which makes the patch a _derivative work_ and subject to the same
 license terms.  The authors of this patch wish to extend and apply the same
@@ -264,3 +272,13 @@ _Classpath Exception_ to users of binary executable versions of this patch.
     FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     version 2 for more details (a copy is included in the LICENSE file that
     accompanied this code).
+
+[GPLv2CPE]: https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE
+[JDK7131459]: https://bugs.openjdk.java.net/browse/JDK-7131459
+[JDK8039915]: https://bugs.openjdk.java.net/browse/JDK-8039915
+[JDK8041961]: https://bugs.openjdk.java.net/browse/JDK-8041961
+[JDK8061380]: https://bugs.openjdk.java.net/browse/JDK-8061380
+[JDK9patch]: http://hg.openjdk.java.net/jdk9/jdk9/jdk/rev/963ef28a8224
+[JDK8patch]: http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/147843e7006a
+[StackOverflow]: http://stackoverflow.com/a/24427356/2390644
+[J6Agent]: http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html

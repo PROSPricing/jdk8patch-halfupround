@@ -112,7 +112,7 @@ final class SelfTest implements Runnable
             case 4: // failed, !applied, >=java8
                 result = DigitListPatch.installed
                     ? "NOT FIXED (patch not supported on this Java version/vendor?)"
-                    : "NOT FIXED (expected on Java 1.8)";
+                    : "NOT FIXED (expected on Java 1.8 < u40)";
                 break;
             default: // failed, !applied, <java8
                 result = "BAD (maybe a different bug in this version of Java?)";

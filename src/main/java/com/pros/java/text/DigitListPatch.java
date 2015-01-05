@@ -73,7 +73,21 @@ public final class DigitListPatch implements ClassFileTransformer
     /** Will be {@code true} if this driver changed the bytecode of the target class. */
     static volatile boolean applied;
 
-    static final int ASM_VERSION = Opcodes.ASM4;
+    static final int ASM_VERSION;
+    static
+    {
+        int asmVer;
+        try
+        {
+            asmVer = Opcodes.class.getField("ASM5").getInt(/*static field*/ null);
+        }
+        catch (Exception notASM5) // ReflectiveOperationException not available until Java 7
+        {
+            asmVer = Opcodes.ASM4;
+        }
+        ASM_VERSION = asmVer;
+    }
+
     private static final int JAVA_8_BYTECODE = 0x34; // major version 52
     private static final String TARGET_CLASS_INTERNAL_NAME = "java/text/DigitList";
     private static final String PATCH_METHOD_NAME = "__patched__shouldRoundUp_HALF_UP";
@@ -119,7 +133,10 @@ public final class DigitListPatch implements ClassFileTransformer
         {
             return null; // not Java 8 --> nothing needs patching
         }
-        classfileBytes[7]--; // HACK: pretend it's Java 7 bytecode and cross your fingers!
+        else if (ASM_VERSION == Opcodes.ASM4) // don't perform hack for other ASM versions
+        {
+            classfileBytes[7]--; // HACK: pretend it's Java 7 bytecode and cross your fingers!
+        }
 
         ClassWriter writer = new ClassWriter(/* flags */ 0);
         TargetClassAdapter visitor = new TargetClassAdapter(writer);
@@ -270,8 +287,21 @@ public final class DigitListPatch implements ClassFileTransformer
             // target method arg 2: allDecimalDigits (boolean, represented as int)
             visitIntInsn(ILOAD, 3); // calling method's argument 2
 
-            visitMethodInsn(
-                INVOKEVIRTUAL, TARGET_CLASS_INTERNAL_NAME, PATCH_METHOD_NAME, patchMethodDesc);
+            if (ASM_VERSION == Opcodes.ASM4)
+            {
+                visitMethodInsn(
+                    INVOKEVIRTUAL, TARGET_CLASS_INTERNAL_NAME, PATCH_METHOD_NAME, patchMethodDesc);
+            }
+            else
+            {
+                visitMethodInsn(    // this overload is only available starting in ASM 5.x
+                    INVOKEVIRTUAL,
+                    TARGET_CLASS_INTERNAL_NAME,
+                    PATCH_METHOD_NAME,
+                    patchMethodDesc,
+                    false /* method owner is NOT an interface */
+                );
+            }
             visitInsn(IRETURN);
             cv.bytecodeModified = true;
         }
@@ -368,9 +398,16 @@ public final class DigitListPatch implements ClassFileTransformer
         }
 
         @Override
+        @Deprecated // in ASM 5.x
         public void visitMethodInsn(int opcode, String owner, String name, String desc)
         {
             super.visitMethodInsn(opcode, masquerade(owner), name, desc);
+        }
+
+        @Override // since ASM 5.x
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf)
+        {
+            super.visitMethodInsn(opcode, masquerade(owner), name, desc, itf);
         }
 
         @Override

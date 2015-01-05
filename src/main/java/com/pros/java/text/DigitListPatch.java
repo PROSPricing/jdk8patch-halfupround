@@ -357,7 +357,7 @@ public final class DigitListPatch implements ClassFileTransformer
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String desc)
         {
-            super.visitFieldInsn(opcode, masquerade(owner), name, desc);
+            super.visitMethodInsn(opcode, masquerade(owner), name, desc);
         }
 
         @Override

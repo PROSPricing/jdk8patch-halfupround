@@ -44,12 +44,10 @@ import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.security.ProtectionDomain;
 import java.util.Arrays;
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -75,6 +73,8 @@ public final class DigitListPatch implements ClassFileTransformer
     /** Will be {@code true} if this driver changed the bytecode of the target class. */
     static volatile boolean applied;
 
+    static final int ASM_VERSION = Opcodes.ASM4;
+    private static final int JAVA_8_BYTECODE = 0x34; // major version 52
     private static final String TARGET_CLASS_INTERNAL_NAME = "java/text/DigitList";
     private static final String PATCH_METHOD_NAME = "__patched__shouldRoundUp_HALF_UP";
 
@@ -109,6 +109,18 @@ public final class DigitListPatch implements ClassFileTransformer
         {
             return null; // ignore all other classes
         }
+
+        // ASM 4.x throws IAE when finding bytecode with major version 52 (Java 8) as will be
+        // the case in the Java 8 version of the target class.  :-(
+        // http://forge.ow2.org/tracker/index.php?func=detail&aid=316375&group_id=23&atid=350023
+        assert classfileBytes.length > 7;
+        int majorVersion = (((int) classfileBytes[6] & 0xFF) << 4) + ((int) classfileBytes[7] & 0xFF);
+        if (majorVersion != JAVA_8_BYTECODE)
+        {
+            return null; // not Java 8 --> nothing needs patching
+        }
+        classfileBytes[7]--; // HACK: pretend it's Java 7 bytecode and cross your fingers!
+
         ClassWriter writer = new ClassWriter(/* flags */ 0);
         TargetClassAdapter visitor = new TargetClassAdapter(writer);
         try
@@ -124,7 +136,7 @@ public final class DigitListPatch implements ClassFileTransformer
         catch (Exception e)
         {
             System.err.println("Failed to patch " + TARGET_CLASS_INTERNAL_NAME);
-            System.err.println(e);
+            e.printStackTrace(System.err);
             return null; // make no changes
         }
     }
@@ -134,13 +146,13 @@ public final class DigitListPatch implements ClassFileTransformer
      * the method signature that (1) indicates that the bug may be present and
      * (2) contains the faulty code.
      */
-    private static class TargetClassAdapter extends ClassAdapter
+    private static class TargetClassAdapter extends ClassVisitor
     {
         boolean bytecodeModified;
 
         TargetClassAdapter(ClassVisitor cv)
         {
-            super(cv);
+            super(ASM_VERSION, cv);
         }
 
         @Override
@@ -169,7 +181,7 @@ public final class DigitListPatch implements ClassFileTransformer
      * which is conveniently preceeded immediately by a specific switch case label.
      * The faulty bytecode is bypassed by injecting a call to an alternate implementation.
      */
-    private static class TargetMethodAdapter extends MethodAdapter implements Opcodes
+    private static class TargetMethodAdapter extends MethodVisitor implements Opcodes
     {
         private final TargetClassAdapter cv;
         private Label halfUpSwitchCaseLabel;
@@ -178,13 +190,13 @@ public final class DigitListPatch implements ClassFileTransformer
 
         TargetMethodAdapter(TargetClassAdapter classVisitor, MethodVisitor mv)
         {
-            super(mv);
+            super(ASM_VERSION, mv);
             cv = classVisitor;
         }
 
         // Thankfully, there is only one switch block in the target method!
         @Override
-        public void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels)
+        public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels)
         {
             // Switches on Enum types should use the enum constant's ordinal() value
             // as the label index inside the TABLESWITCH
@@ -299,16 +311,17 @@ public final class DigitListPatch implements ClassFileTransformer
      * into the target bytecode without having to write that bytecode by hand.  (The shim
      * was compiled into bytecode by {@code javac}, which is a lot better than I am.)
      * <p>
-     * For this patch, ignore everything (the default behavior of {@link AbstractClassVisitor})
+     * For this patch, ignore everything (the default behavior of {@code ClassVisitor})
      * except the shim method.  Specifically, we <em>don't want</em> fields declared in the shim
      * because those fields (in this case) are already present in the original JDK class.
      */
-    private static class TemplateClassAdapter extends AbstractClassVisitor
+    private static class TemplateClassAdapter extends ClassVisitor
     {
         ClassVisitor outputTarget;
 
         TemplateClassAdapter(ClassVisitor target)
         {
+            super(ASM_VERSION); // using c'tor that does not chain to 'target' by default
             outputTarget = target;
         }
 
@@ -329,14 +342,14 @@ public final class DigitListPatch implements ClassFileTransformer
      * Mirrors the template method, except all references to the template class
      * will be replaced with references to the target class.
      */
-    private static class TemplateMethodAdapter extends MethodAdapter
+    private static class TemplateMethodAdapter extends MethodVisitor
     {
         private static final String TEMPLATE_CLASS_INTERNAL_NAME =
             Type.getInternalName(DigitList.class);
 
         TemplateMethodAdapter(MethodVisitor mv)
         {
-            super(mv);
+            super(ASM_VERSION, mv);
         }
 
         private String masquerade(String owner)

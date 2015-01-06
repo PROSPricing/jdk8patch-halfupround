@@ -34,14 +34,14 @@
 
 package com.pros.java.text;
 
+import static com.pros.java.text.DigitListPatch.ASM_VERSION;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 
 /**
@@ -72,15 +72,15 @@ public class EnumSwitchCommonCaseBranchLabelOffsetTest
     throws Exception
     {
         final Label[] capturedLabels = new Label[Symbols.values().length];
-        class TestMethodAdapter extends MethodAdapter
+        class TestMethodAdapter extends MethodVisitor
         {
             TestMethodAdapter(MethodVisitor mv)
             {
-                super(mv);
+                super(ASM_VERSION, mv);
             }
 
             @Override
-            public void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels)
+            public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels)
             {
                 capturedLabels[Symbols.A.ordinal()] = labels[Symbols.A.ordinal()];
                 capturedLabels[Symbols.B.ordinal()] = labels[Symbols.B.ordinal()];
@@ -89,7 +89,7 @@ public class EnumSwitchCommonCaseBranchLabelOffsetTest
             }
         }
 
-        ClassAdapter adapter = new ClassAdapter(new ClassWriter(/* flags */ 0))
+        ClassVisitor adapter = new ClassVisitor(ASM_VERSION, new ClassWriter(/* flags */ 0))
         {
             @Override
             public MethodVisitor visitMethod(

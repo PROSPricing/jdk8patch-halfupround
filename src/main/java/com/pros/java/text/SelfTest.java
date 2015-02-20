@@ -92,9 +92,10 @@ final class SelfTest implements Runnable
 
         out.printf("%nAbove tests used Java %s (%s)%n", javaVersion, javaVendor);
         out.printf("installed at %s%n", System.getProperty("java.home"));
-        out.printf("%nAgent installed: %s%nPatch applied  : %s%n%nOverall result : ",
+        out.printf("%nAgent installed: %s%nPatch applied  : %s%n",
             DigitListPatch.installed ? "yes" : "NO (missing -javaagent?)",
             DigitListPatch.applied ? "yes" : "NO");
+        out.printf("Last exception : %s%n%n", DigitListPatch.error);
 
         int resultCode = (behaviorOK ? 0x1 : 0)
             | (DigitListPatch.applied ? 0x2 : 0)
@@ -124,7 +125,7 @@ final class SelfTest implements Runnable
             default: // failed, !applied, <java8
                 result = "BAD (maybe a different bug in this version of Java?)";
         }
-        out.println(result);
+        out.println("Overall result : " + result);
     }
 
     boolean isJava8orNewer(String version, String vendor)

@@ -73,6 +73,9 @@ public final class DigitListPatch implements ClassFileTransformer
     /** Will be {@code true} if this driver changed the bytecode of the target class. */
     static volatile boolean applied;
 
+    /** Holds the last exception encountered during patching, if any. May be {@code null}. */
+    static volatile Throwable error;
+
     static final int ASM_VERSION;
     static
     {
@@ -83,6 +86,7 @@ public final class DigitListPatch implements ClassFileTransformer
         }
         catch (Exception notASM5) // ReflectiveOperationException not available until Java 7
         {
+            error = notASM5;
             asmVer = Opcodes.ASM4;
         }
         ASM_VERSION = asmVer;
@@ -152,6 +156,7 @@ public final class DigitListPatch implements ClassFileTransformer
         }
         catch (Exception e)
         {
+            error = e;
             System.err.println("Failed to patch " + TARGET_CLASS_INTERNAL_NAME);
             e.printStackTrace(System.err);
             return null; // make no changes
@@ -433,6 +438,7 @@ public final class DigitListPatch implements ClassFileTransformer
         }
         catch (Exception e)
         {
+            error = e;
             throw new IllegalStateException("Could not retrieve bytecode for: " + clazz);
         }
     }

@@ -1,0 +1,31 @@
+Version 1.3 (06-Jan-2015)
+=========================
+- Functionally equivalent to version 1.0.
+
+- FIXED: code contained erroneous super call to the wrong super method.
+  The mistake did not appear to impact the correct application of the patch.
+
+- Version number scheme changed for future support of newer ASM versions.
+  The new convention uses the minor version ('x' in 1.x) to indicate the compatible
+  major version of the ASM library.  Version 1.3 is compatible with ASM 3.x (tested
+  with ASM 3.1).  Because of the new scheme, versions 1.1 and 1.2 were skipped.
+
+- jCenter Maven coordinate changed. (Sorry!)
+    group   : com.pros.opensource.java
+    artifact: jdk8patch-halfupround-asm
+    version : 1.3
+
+
+
+Version 1.0 (31-Oct-2014)
+=========================
+- Uses ASM 3.1, will *NOT* work with ASM >= 4.
+
+- Self test passes using Oracle Java 6, 7, 8 (GA), 8u25, and 8u40-ea-b12.
+
+- Published to jCenter at Maven coordinates
+    group   : com.pros.opensource.java
+    artifact: jdk8patch-halfupround-asm31
+    version : 1.0
+
+NOTE: Pre-1.0 versions are not listed.

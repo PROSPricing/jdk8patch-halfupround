@@ -88,46 +88,35 @@ due diligence and thorough testing of your own application.
 
 This patch _appears_ to work, but the authors have done _neither_ exhaustive testing across
 the vast range of decimal values _nor_ have they tested every possible rounding path inside
-the JDK libraries.  More eyes on the patch code, and more real-world tests would be much
-appreciated.  Please consider _opening an issue_ in Github with the keyword `WFM` in the
-title if this patch worked for your product, library, or application.  Of course, if the patch
-failed to work in a situation, _definitely_ open an issue here in Github with as much detail
-as you can provide.
-
-**Pull requests for new testcases, and of course bug fixes, are highly desired and welcome.**
-
+the JDK libraries.  More eyes on the patch code, and more real-world tests, never hurt.
+Your feedback is appreciated.  Please consider _opening an issue_ in Github with the keyword
+`WFM` in the title if this patch worked for your product, library, or application.  Of course,
+if the patch failed to work in a situation, _definitely_ open an issue here in Github with as
+much detail as you can provide.
 
 ## Enable the patch
 
 Pre-requisites:
 
-1. This patch library's JAR
-2. Its dependencies (currently ASM version >= 3.1 and < 4.0) must be _on the classpath_.
-
-If your application does not currently use the ASM library, there is a version of this patch that
-includes the ASM 3.1 classes already in the JAR.  Or, use your favorite build system and package
-management tool to get `asm:asm:3.1` into your project's classpath.  (If you need a newer version
-of ASM or a different tool, contributions to the project are welcome.)
-
-Precompiled JARs are available publicly:
-
-         | [jCenter](https://bintray.com/bintray/jcenter)
----------|------------------------------------------------
-Group    | com.pros.opensource.java
-Artifact | jdk8patch-halfupround-asm31
-Version  | 1.0
-
-**Always use the latest available version.** Ironically, the logic in versions 0.9.1 and earlier
-did not account for the intentional and correct changes from JDK-7131459 in some edge cases.
-
-Use the classifier `all` if you want the JAR that _bundles ASM 3.1 inside_ (in its original package
-structure), then you can _exclude_ the transitive dependency on the ASM library.  (If you take
-this approach, we assume you know how to manage your dependencies and avoid classpath collisions.)
+1. This patch library's JAR file.
+2. An appropriate version of the ASM library must be _on the classpath_.
 
 Applying the patch is as simple as adding one additional entry to the _beginning_ of the command
 line that starts your application's JVM:
 
     java -javaagent:path/to/patch.jar ...
+
+**Precompiled JARs are available publicly at [jCenter][JCenter]**. Refer to the
+[current version][SELF] of this README file for compatibility information and Maven
+coordinates. Also review the `changelog.txt` file for a summary of what has changed since
+prior releases.
+
+If your application does not already include the ASM library, use your favorite build system and
+dependency management tool to get ASM into your project's classpath.  Or, download the library
+using the Maven classifier `all` to get an alternate JAR that _pre-bundles ASM_ inside (in its
+original package structure).  With the bundled JAR, you can _exclude_ the transitive dependency
+on the ASM library.  (If you take the bundled approach, we assume you know how to manage your
+dependencies and avoid package collisions in your classpath.)
 
 ## Diagnostics
 
@@ -273,6 +262,7 @@ _Classpath Exception_ to users of binary executable versions of this patch.
     version 2 for more details (a copy is included in the LICENSE file that
     accompanied this code).
 
+[SELF]: https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/README.md
 [GPLv2CPE]: https://github.com/PROSPricing/jdk8patch-halfupround/blob/master/LICENSE
 [JDK7131459]: https://bugs.openjdk.java.net/browse/JDK-7131459
 [JDK8039915]: https://bugs.openjdk.java.net/browse/JDK-8039915
@@ -282,3 +272,4 @@ _Classpath Exception_ to users of binary executable versions of this patch.
 [JDK8patch]: http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/147843e7006a
 [StackOverflow]: http://stackoverflow.com/a/24427356/2390644
 [J6Agent]: http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html
+[JCenter]: https://bintray.com/bintray/jcenter

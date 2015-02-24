@@ -389,11 +389,24 @@ public final class DigitListPatch implements ClassFileTransformer
     // Helper for loading the bytecode of the template/shim
     static byte[] extractBytecode(Class<?> clazz)
     {
+        String resourceName = Type.getInternalName(clazz) + ".class";
+        try
+        {
+            return extractResourceBytes(clazz.getClassLoader(), resourceName);
+        }
+        catch (Exception e)
+        {
+            throw new IllegalStateException("Could not retrieve bytecode for: " + clazz);
+        }
+    }
+
+    static byte[] extractResourceBytes(ClassLoader loader, String resourceName)
+    throws IOException
+    {
         InputStream inStream = null;
         try
         {
-            String resourceName = Type.getInternalName(clazz) + ".class";
-            inStream = clazz.getClassLoader().getResourceAsStream(resourceName);
+            inStream = loader.getResourceAsStream(resourceName);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             byte[] buff = new byte[1024];
             int bytesRead;
@@ -404,10 +417,6 @@ public final class DigitListPatch implements ClassFileTransformer
             baos.flush();
             baos.close();
             return baos.toByteArray();
-        }
-        catch (Exception e)
-        {
-            throw new IllegalStateException("Could not retrieve bytecode for: " + clazz);
         }
         finally
         {

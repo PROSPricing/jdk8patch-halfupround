@@ -36,12 +36,16 @@ package com.pros.java.text;
 
 import static java.lang.System.out;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 /**
  * Executes a suite of rounding test cases and reports one of several outcomes based
@@ -67,9 +71,12 @@ final class SelfTest implements Runnable
     @Override
     public void run()
     {
-        out.printf("%nPATCH SELF TEST:%n"
-            + "  java.text.DigitList.shouldRoundUp(int,boolean,boolean)%n"
-            + "  HALF_UP case%n");
+        out.printf(
+            "%nPATCH SELF TEST:%n"
+                + "  java.text.DigitList.shouldRoundUp(int,boolean,boolean) case HALF_UP%n"
+                + "  version %s%n",
+            determinePatchVersion()
+        );
 
         String javaVersion = System.getProperty("java.version");
         String javaVendor = System.getProperty("java.vendor");
@@ -270,5 +277,24 @@ final class SelfTest implements Runnable
         }
         out.printf("expected: %s%n", correct);
         return false;
+    }
+
+    private String determinePatchVersion()
+    {
+        try
+        {
+            byte[] utf8bytes = DigitListPatch.extractResourceBytes(
+                this.getClass().getClassLoader(),
+                "META-INF/MANIFEST.MF");
+            Manifest mf = new Manifest(new ByteArrayInputStream(utf8bytes));
+            Attributes attrs = mf.getMainAttributes();
+            String version = attrs.getValue("Implementation-Version");
+            String date = attrs.getValue("Build-Date");
+            return String.format("%s (%s)", version, date);
+        }
+        catch (IOException ioe)
+        {
+            return "unknown (" + ioe + ")";
+        }
     }
 }

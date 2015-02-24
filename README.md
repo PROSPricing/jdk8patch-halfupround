@@ -118,6 +118,32 @@ original package structure).  With the bundled JAR, you can _exclude_ the transi
 on the ASM library.  (If you take the bundled approach, we assume you know how to manage your
 dependencies and avoid package collisions in your classpath.)
 
+### Latest available releases
+
+<table>
+  <thead>
+    <tr>
+      <th rowspan="2">Maven coordinates</td>
+      <td colspan="3" align="center" nowrap>ASM compatibility (tested version)</td>
+    </tr>
+    <tr>
+      <th nowrap><b>ASM 3.x</b> (3.1)</td>
+      <th nowrap><b>ASM 4.x</b> (4.2)</td>
+      <th nowrap><b>ASM 5.x</b> (5.0.3)</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Group</td><td colspan="3" align="center" nowrap>com.pros.opensource.java</td></tr>
+    <tr><td>Artifact</td><td colspan="3" align="center" nowrap>jdk8patch-halfupround-asm</td></tr>
+    <tr align="center">
+      <td align="left">Version</td>
+      <td>1.3</td>
+      <td>1.4</td>
+      <td>1.5</td>
+    </tr>
+  </tbody>
+</table>
+
 ## Diagnostics
 
 The patch library includes a **self test** you can use to determine if your particular JVM is

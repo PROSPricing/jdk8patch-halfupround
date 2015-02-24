@@ -26,7 +26,7 @@ only affect the `HALF_UP` rounding mode, which is the kind of rounding taught in
 grade school arithmetic classes: `0.5` rounds away from zero, always.
 
 This issue is known to exist in the Oracle/OpenJDK 1.8.0 GA release,
-as well as in released updates: **u5**, **u11**, **u20**, and **u25**.
+as well as in released updates: **u5**, **u11**, **u20**, **u25**, and **u31**.
 
 ## The fix
 

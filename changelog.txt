@@ -1,3 +1,14 @@
+Version 1.5 (23-Feb-2015)
+=========================
+- Supports ASM 5.x (tested with version 5.0.3).
+- EXPERIMENTAL: degrades gracefully to support ASM 4.x.
+  Uses reflection to identify ASM 5, and if not found falls back to the ASM 4
+  code path (and hack) from patch version 1.4.  If the reflection causes
+  problems for users it may be removed in a future version.
+- Verified behavior on Oracle jdk-8u31.
+
+
+
 Version 1.4 (23-Feb-2015)
 =========================
 - Self test output includes patch version and build date for identification.

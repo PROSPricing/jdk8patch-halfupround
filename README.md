@@ -28,12 +28,14 @@ grade school arithmetic classes: `0.5` rounds away from zero, always.
 This issue is known to exist in the Oracle/OpenJDK 1.8.0 GA release,
 as well as in released updates: **u5**, **u11**, **u20**, **u25**, and **u31**.
 
-## The fix
+## The solution
 
-**Oracle has committed an official fix** for Java _9_ ([bug 8039915][JDK8039915], [changeset][JDK9patch]),
-and backported to **Java 8u40** ([bug 8061380][JDK8061380], [changeset][JDK8patch]).  The _8u40-b12_
-early access image from 28 October 2014 is the first available build that is not affected by the
-problem described above.
+**Oracle has committed an official fix**
+
+- Initial fix in Java _9_ ([bug 8039915][JDK8039915], [changeset][JDK9patch])
+- Backported to Java _8_ ([bug 8061380][JDK8061380], [changeset][JDK8patch]), first
+  included in Early Access build _8u40-b12_ (28 October 2014).
+- **Java 8u40** public GA release, with JDK _1.8.0_40-b25_ (03 March 2015, [release notes][JDK8u40rel]).
 
 If you are running Java 8 update 40 or later, you do not require this patch.  However, if you wish
 to support earlier versions of Java 8, read on.
@@ -299,3 +301,4 @@ _Classpath Exception_ to users of binary executable versions of this patch.
 [StackOverflow]: http://stackoverflow.com/a/24427356/2390644
 [J6Agent]: http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html
 [JCenter]: https://bintray.com/bintray/jcenter
+[JDK8u40rel]: http://www.oracle.com/technetwork/java/javase/8u40-relnotes-2389089.html
